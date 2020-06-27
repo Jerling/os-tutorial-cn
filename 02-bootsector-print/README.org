@@ -1,0 +1,48 @@
+[[file:./README_en.md][English]]
+
+/事先应该 Google 的概念: interrupts(中断), CPU registers(寄存器)/
+
+*目标: 让之前空白的启动扇区程序打印一些文本*
+
+我们将在启动扇区程序的无限循环之前加入一些东西，即在屏幕上打印一些信息。为了实现这个，
+我们需要抛出一个中断。
+
+在这个例子中，我们将 "Hello" 的每一个字母写入 =al(ax 低位部分)= 寄存器中，字节 =0x0e= 写入
+=ah(ax 的高位部分)= 中，接着抛出 =0x10= 号中断，这是一个为显示服务的普通中断。
+
+=ah= 上的 =0x0e= 告诉显示中断（其实是个函数），我们想要在 tty 模式中执行 '写 =al= 中的内容'
+
+我们只设置 tty 模式一次，尽管在现实中，我们不能保证 =ah= 中的内容是永恒不就的。在我们眨眼的时候，
+这个 CPU 上其它进程可能正在运行，如果没有适当清理，可能会在 =ah= 中留下垃圾。
+
+对于这个例子，我们无需注意以上问题，因为我们在这个 CPU 上只有一个程序。
+
+我们的启动扇区看起来像这样：
+#+BEGIN_SRC asm
+mov ah, 0x0e ; tty 模式
+mov al, 'H'
+int 0x10
+mov al, 'e'
+int 0x10
+mov al, 'l'
+int 0x10
+int 0x10 ; 'l' 仍在 =al= 中，记得么？
+mov al, 'o'
+int 0x10
+
+jmp $ ; 跳转到当前指令，也就是无限跳转了
+
+; 填0, 写魔数
+times 510 - ($-$$) db 0
+dw 0xaa55
+#+END_SRC
+
+你可以使用 =xxd file.bing= 检查这个二进制文件
+
+不管怎样，你知道该怎么做：
+
+=nasm -fbin boot_sect_hello.asm -o boot_sect_hello.bin=
+
+=qemu boot_sect_hello.bin=
+
+你的启动扇区将打印 'Hello',并且进入无限循环里。
