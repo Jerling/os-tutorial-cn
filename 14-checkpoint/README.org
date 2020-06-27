@@ -38,7 +38,7 @@ make install
 请用 =xdd= 验证，你会看到一些字符串。实际上，检验目标文件中字符串的正确方式是使用
 =string kernel.elf= .
 
-我们可以好好利用 =qemu= 这个很酷的特性。使用 =makge debug= , 接着会进入 =gdb shell=
+我们可以好好利用 =qemu= 这个很酷的特性。使用 =make debug= , 接着会进入 =gdb shell=
 中：
 
 - 在 =kernel.c:main()= 上设置一个断点： =b main=
