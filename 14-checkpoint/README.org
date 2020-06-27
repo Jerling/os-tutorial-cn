@@ -1,0 +1,54 @@
+[[file:./README_en.md][English]]
+
+/事先需要 Google 的概念：monolithic kernel(宏内核), microkernel(微内核), debugger(调试器), gdb/
+
+*目标：停下来稍微组织一下我们的代码，接着学习如何使用 =gdb= 调试内核*
+
+也许你没有意识到它，但是你自己的内核已经在运行了。
+
+然而，它确实太小了，只是打印了一个 'X'。现在是时候停下一会儿，将代码组织到文件夹中了，
+并创建一个可扩展的 =Makefile= ，方便未来编码，还需要想一个策略。
+
+查看新文件夹的组织结构。大部分是之前课程的符号链接，如果我们修改了它们，可能需要删除它们
+并重新创建一个链接。
+
+而且，从现在开始，我们将大部分使用 C 语言编码。我们将充分利用 =qemu= 和 =gdb= 连接的调试能力。
+
+首先，需要交叉编译 =gdb= , 因为 OSX 使用 =lldb= , 而它和 =ELF= 文件格式不兼容（brew 中的 gdb 也是）。
+
+#+BEGIN_SRC sh
+cd /tmp/src
+curl -O http://ftp.rediris.es/mirror/GNU/gdb/gdb-7.8.tar.gz
+tar xf gdb-7.8.tar.gz
+mkdir gdb-build
+cd gdb-build
+export PREFIX="/usr/local/i386elfgcc"
+export TARGET=i386-elf
+../gdb-7.8/configure --target="$TARGET" --prefix="$PREFIX" --program-prefix=i386-elf-
+make
+make install
+#+END_SRC
+
+检查 =Makefile= 的 =make debug= 目标。这个目标用于构建 =kernel.elf= , 这是一个包含内核所有符号的目标文件（不是二进制文件）。感谢 =gcc= 的 =-g= 选项。
+请用 =xdd= 验证，你会看到一些字符串。实际上，检验目标文件中字符串的正确方式是使用
+=string kernel.elf= .
+
+我们可以好好利用 =qemu= 这个很酷的特性。使用 =makge debug= , 接着会进入 =gdb shell=
+中：
+
+- 在 =kernel.c:main()= 上设置一个断点： =b main=
+- 运行 OS: =continue=
+- 运行两步， =next= ， =next= . 你可以看到：我们只是将 'X' 设置在屏幕上，但它并没有出现（查看
+   =qemu= 屏幕）
+- 让我们看看 =video memory= 中的内容： =print *video_memory= . 里面是 "Landed in 32
+  -bit Protected Mode" 中的 'L' .
+- 嗯。。。，让我们确保 =video_memory= 指向正确的地址， =print video_memory=
+- =next= , 将我们的 'X' 放在这里。
+- 确认一次： =print *video_memory= , 查看 =qemu= 屏幕，确实在这里了。
+
+  现在是时候读一下 =gdb= 教程了，学习一些更高级的东西，如： =info registers= , 在之后会省下我
+  们大量时间。
+
+  你可能注意到了，从这个课程开始，我们至今都没有讨论我们写的内核属于什么类型。它将是一个宏内核，
+  因为宏内核更容易设计与实现，完成我们第一个内核之后。也许在未来我们会增加 =15-b= 课程用于设计
+  一个微内核，谁知道呢。
