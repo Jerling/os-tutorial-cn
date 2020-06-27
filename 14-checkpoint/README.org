@@ -29,6 +29,11 @@ make
 make install
 #+END_SRC
 
+#+BEGIN_QUOTE
+如果是 ubuntu, 需要先安装： textinfo, libncurses5-dev, babeltrace
+#+END_QUOTE
+
+
 检查 =Makefile= 的 =make debug= 目标。这个目标用于构建 =kernel.elf= , 这是一个包含内核所有符号的目标文件（不是二进制文件）。感谢 =gcc= 的 =-g= 选项。
 请用 =xdd= 验证，你会看到一些字符串。实际上，检验目标文件中字符串的正确方式是使用
 =string kernel.elf= .
