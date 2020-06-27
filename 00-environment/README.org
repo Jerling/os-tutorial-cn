@@ -1,0 +1,13 @@
+[[file:./README_en.md][English]]
+
+/需要 Google 的概念: linux, mac, terminal(终端), compiler(编译器), emulator(模拟器), nasm, qemu/
+
+*目标: 安装运行本教程程序必要的软件*
+
+我使用 Mac 进行工作，但 Linux 更好，因为它包含所有可用的标准软件。
+
+在 Mac 上，安装 [[http://brew.sh][Homebrew]] , 然后 =brew install qemu nasm=
+
+如果你安装了 Xcode 开发工具 =nasm= , 不要使用它，它在大部分示例中无法工作。要一直使用 =/usr/local/bin/nasm=
+
+如果有些系统的 =qemu= 切分为多个二进制文件。你可能想使用 =qemu-system-x86_64 binfile=
