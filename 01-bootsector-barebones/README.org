@@ -1,0 +1,54 @@
+[[file:./README_en.md][English]]
+
+/事先需要 Google 的概念： assembler(汇编器), BIOS/
+
+*目标：创建一个 BIOS 解释为启动磁盘的二进制文件*
+
+非常激动，我们将要创建一个自己的启动扇区程序！
+
+* 理论
+当计算机启动的时候， BIOS 并不知道如何加载 OS，因此它将这个任务委托给了启动扇区程序。
+那么，启动扇区程序必须存放在一个已知的标准位置处。这个位置就是磁盘的第一个扇区（柱面0,磁头0,扇区0），
+并且占据 512 字节。
+
+为了确保 "磁盘是可启动" 的，BIOS 会检查第 =511= 和 =512= 个字节是否为 =0xAA55= .
+
+一个最简单的启动扇区程序示例 :
+
+#+BEGIN_EXAMPLE
+e9 fd ff 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[ 29 more lines with sixteen zero-bytes each ]
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 55 aa
+#+END_EXAMPLE
+
+程序基本上都是0, 以16位值 0xAA55 结束（注意端模式, x86 是小端模式）。前三个字节表示无终止的跳转指令。
+
+* 最简单的启动扇区程序
+你可以将上述 512 个字节通过二进制编辑器直接写进文件里，或者写一个非常简单的汇编代码：
+
+#+BEGIN_SRC asm
+; 无终止跳转指令 (e9 fd ff)
+loop:
+    jmp loop
+
+; 填充 510-($-$$) 个字节0
+times 510-($-$$) db 0
+; 魔数
+dw 0xaa55
+#+END_SRC
+
+编译： =nasm -f bin boot_sect_simple.asm -o boot_sect_simple.bin=
+
+OSX 警告：如果出现错误，再次阅读 00 章节。
+
+我知道你很想知道结果（我也是！），那么这样做：
+#+BEGIN_SRC sh
+qemu boot_sect_simple.bin
+#+END_SRC
+
+有些系统，你可能需要运行 =qemu-system-x86_64 boot_sect_simple.bin= . 如果遇到 =SDL= 错误，尝试使用 =--nographic= 或 =--curses= 选项。
+
+你将看到一个打开的窗口，并写着 "Boot from Hard Disk...", 没有其它东西。
+
+你最后一次如此兴奋地看到无限循环是什么时候？ ;-)
