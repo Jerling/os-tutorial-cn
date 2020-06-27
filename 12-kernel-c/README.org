@@ -1,0 +1,50 @@
+[[file:./README_en.md][English]]
+
+/事先需要 Google 的概念：C, object code(目标代码), linker(链接器), disassemble(反汇编)/
+
+*目标：学习写一些相同的低层代码，像之前的汇编语言一样，但是这次使用 C 语言*
+
+** 编译
+让我们看看 C 编译器是如何编译我们的代码的，将它们与汇编器生成的机器码进行比较。
+
+我们将开始写一个包含函数的简单程序， =function.c=, 打开并测验它。
+
+为了编译依赖于系统的代码，我们需要使用 =-ffreestanding= 标记，因此，以这处方式编译 =function.c= :
+#+BEGIN_SRC sh
+i386-elf-gcc -ffreestanding -c function.c -o function.o
+#+END_SRC
+
+验证汇编器生成的机器码：
+#+BEGIN_SRC sh
+i386-elf-objdump -d function.o
+#+END_SRC
+
+现在我们认识了，不是吗？
+Now that is something we recognize, isn't it?
+
+** 链接
+最后，为了生成二进制文件，我们使用链接器。这一步对我们理解高级语言是如何调用标记的很重要。我们的函数在内存中的偏移值在哪里呢？我们实际上不知道。
+举个例子，我们将其放在偏移值为 =0x0= 的地方，并且生成的二进制代码格式没有任何的标记或元数据。
+
+#+BEGIN_SRC sh
+i386-elf-ld -o function.bin -Ttext 0x0 --oformat binary function.o
+#+END_SRC
+
+注意：链接时会出现一个警告，无视它。
+
+现在可以用 =xxd= 验证两个 "二进制" 文件了，＝function.o= 和 =function.bin= . 你将看到 =.bin= 文件是机器码，而 =.o= 文件包含许多调试信息，标记等。
+
+** 反编译
+为了满足好奇心，我们将验证这个机器码。
+#+BEGIN_SRC sh
+ndisasm -b 32 function.bin
+#+END_SRC
+
+** 更多
+我鼓励你写更多小程序，特征：
+- 局部变量
+- 函数调用
+- 指针
+
+然后编译和反编译它们，验证生成的机器码。根据 os-guide.pdf 进行解释。尝试回答这个问题：为什么 =pointers.c= 的反汇编结果和你预期的不一致？ "Hello" 的
+ASCII 码 =0x48656c6c6f= 在哪里？
