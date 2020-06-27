@@ -1,0 +1,103 @@
+[[file:./README_en.md][English]]
+
+/事先需要 Google 的概念：control structures(控制结构), function calling(函数调用), strings(字符串)/
+
+*目标: 学习如何使用汇编器编码基本要素（循环、函数）*
+
+我们已经接近了明确定义的启动扇区程序
+
+在第 7 课时，我们将开始从磁盘中读数据，这是加载内核的最后下一步。但是，首先我们要写一些控制结构、函数调用以及全字符串使用的代码。在跳转到磁盘和内核之前，我们确实需要熟悉这此概念。
+
+** 字符串
+
+定义字符串为多个字节，但是以空字节结束，空字节决定了字节序列的结尾。
+
+#+BEGIN_SRC asm
+mystring:
+    db 'Hello, World', 0
+#+END_SRC
+
+记住，单引号包含的文本由汇编器转化为 ASCII 码，而独立的 0 将被一个内容为 =0x00= 的字节（ null ）。
+
+** 控制结构
+
+我们已经使用过一个了： =jmp $= 用于无限跳转。
+
+汇编程序跳转由前面的指令结果定义。例如：
+#+BEGIN_SRC asm
+cmp ax, 4      ; if ax = 4
+je ax_is_four  ; do something (by jumping to that label)
+jmp else       ; else, do another thing
+jmp endif      ; finally, resume the normal flow
+
+ax_is_four:
+    .....
+    jmp endif
+
+else:
+    .....
+    jmp endif  ; not actually necessary but printed here for completeness
+
+endif:
+#+END_SRC
+
+在你自己的头脑中高层次思考，然后将其转换为汇编程序。
+
+有许多的跳转条件：相等，小于，等等。它们可以直推出来，但你总是可以 Google 到它们。
+
+** 调用函数
+正如你所想的，调用函数就是跳转到一个标记中。
+
+参数部分是比较棘手的。这个工作可以分为两步：
+
+1. 程序员知道他们共享的具体寄存器或内存地址
+2. 写多点代码，让函数调用具有一般性，并且不会产生负面影响。
+
+第一步很容易。让我们同意使用 =al= (实际上是 =ax= ) 作为参数寄存器。
+
+#+BEGIN_SRC asm
+mov al, 'X'
+jmp print
+endprint:
+
+...
+
+print:
+    mov ah, 0x0e  ; tty code
+    int 0x10      ; I assume that 'al' already has the character
+    jmp endprint  ; this label is also pre-agreed
+#+END_SRC
+
+可以看到，这种方法很快就会搅拌在一起。当前打印函数仅仅返回到 =endprint= 。如果其它函数想调用它呢？我们将丧失可复用性。
+
+正确的做法带来两点提升：
+
+1. 我们将返回地址存起来，这样就可以改变了
+2. 我们保存当前寄存器，这样就允许子方法修改它们，且不会带来任何负影响
+
+CPU 可以帮助我们保存返回地址。我们使用 =call= 和 =ret= 取代成对 =jmp= 来调用子例程。
+
+为了保存寄存器数据，可以使用一个特殊的操作栈的命令： =pusha= 和它的兄弟 =popa= ,它会将所有寄存器自动压入栈中和之后再恢复。
+
+** 包含外部文件
+
+我假定你是一个程序员，不需要我说服你这为什么好。
+
+语法如下：
+
+#+BEGIN_SRC asm
+%include "file.asm"
+#+END_SRC
+
+** 打印十六进制値
+在下一个课程，我们开始读磁盘，因此，我们需要一些方式来保证我们读的是正确的数据。 =boot_sect_print_hex.asm= 扩展了
+=boot_sect_main.asm= 和 =boot_sect_print.asm= , 使得可以打印十六进制字节，不仅仅是 ASCII 字符。
+
+** 编码！
+让我们跳到代码中。 =boot_sect_print.asm= 文件是一个子例程，它将包含在主文件中。它使用一个循环打印多个字符到屏幕上。
+它也包含一个函数打印一个新行。和 '\n' 类似，但是包含两个字节，换行字符 =0x0A= 以及回车字符 =0x0D= 。请实验移除回车
+字符带来的影响。
+
+正如上面陈述的一样， =boot_sect_print_hex.asm= 用于打印多个字符。
+
+主文件 =boot_sect_main= 加载字符串和字节，调用 =print= , =print_hex= 以及挂起。如果你理解之前的部分，它是相当直接明了的。
