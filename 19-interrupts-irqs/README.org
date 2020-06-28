@@ -1,0 +1,28 @@
+[[file:./README_en.md][English]]
+
+/事先需要 Google 的概念： IRQs(中断请求), PIC(可编程中断芯片), polling(轮询)/
+
+*目标：完成中断的实现以及 CPU 定时器*
+
+当 CPU 启动时， PIC 将 IRQs 0-7 映射到 INT 0x8-0xF, IRQs 8-15 映射到 INT 0x70-0x77.
+这就和我们上节课编写的 ISRs 冲突了，因为我们只编码了 ISRs 0-31, 因此标准的做法是重映射到 ISRs 32-47.
+
+PIC 是通过 I/O 端口进行通信的（15课），主 PIC 命令端口是 0x20, 数据端口是 0x21, 从 PIC 分别为 0xA0 和 0xA1 .
+
+PICs 的重映射代码有点奇怪，并且包含一些掩码， 如果你感到困惑， 可以参考 [[http://www.osdev.org/wiki/PIC][这篇文章]] . 否则你可以直接察看 =cpu/isr.c= ,
+在我们设置 ISRS 的 IDT gates 的后面有新代码，我们为 IRQs 增加了新的 IDT gates.
+
+现在我们跳转到汇编器，在 =interrupt.as,= 文件。 第一个任务就是用 C 语言为 IRQs 添加全局定义。 察看 =global= 的结尾。
+
+然后，在末端添加 IRQs 处理函数， 和 =interrupt.asm= 一样，注意它们是如何跳转到一个新的公共槽的 =irq_common_stub= \
+(下一步)。
+
+我们接着创建这个 =irq_common_stub= , 这是一个和 ISR 很像的东西。它位于 =interrupt.asm= 的顶部。它也定义了一个外部变量
+ =[extern irq_handler]= .
+
+ 现在回到 C 代码，在 =isr.c= 中写一个 =irq_handler()= 函数。 它发送一些 EOIss 给 PICs 并且调用适当的处理函数，它存在
+ 于定义在头部的 =interrupt_hadlers= 数组中。这个新的结构体定义在 =isr.h= 中。我们将使用一个简单的方法来注册这些中断处理函数 .
+
+ 工作量比较大，但是现在我们能够定义自己的 IRQ 处理函数了。
+
+  =kernel.c= 中没有改变，因此，不需要运行和察看结果。请移步下一节课检查这些有趣的 IRQs.
