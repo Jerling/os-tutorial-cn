@@ -1,0 +1,26 @@
+[[file:./README_en.md][English]]
+
+/事先需要 Google 的概念： CPU timer(CPU 定时器), keyboard interrupts(键盘中断), scancode(扫描码)/
+
+*目标：实现第一个 IRQ 处理函数，CPU 定时器和键盘*
+
+现在准备测试我们的硬件中断
+
+** 定时器
+定时器很容易配置。首先，我们在 =cpu/timer.h= 中声明一个 =init_timer()= , 并且在 =cpu/timer.c= 中实现它。
+它只需要解决时钟频率的计算问题，并且发送一些字节到适当的端口。
+
+现在我们需要修改 =kernel/util.c= 的 =int_to_ascii()= , 为了打印正确的数字顺序。为了这个，我们需要实现 =reverse()= 和 =strlen()= 函数。
+
+最后，回到 =kernel/kernel.c= 函数中做两件事，开启中断和初始化定时器中断。
+
+** 键盘
+键盘甚至更容易，但有一个缺点。 按键时，PIC 不会发给我们 ASCII 码，而是鍵上鍵下事件的扫描码，因此我们需要翻译它们。
+
+察看 =drivers/keyboard.c= , 里面有两个函数 ,一个是回调函数 ,另一个是用于配置这些中断回调函数的初始化函数。并创建
+了一个腄定义这些函数的 =keyboard.h= 文件。
+
+=keyboard.c= 有一个很长用于将扫描码翻译为 ASCII 的表。刚开始， 我们只定义一个简单的 US 键盘的子集。你可以阅读
+更多 [[http://www.win.tue.nl/~aeb/linux/kbd/scancodes-1.html][关于扫描码]] .
+
+我不清楚你，但我非常激动。我们已经很接近构建一个简单的 =shell= 了。在下一节课，我们将扩展键盘的输入。
