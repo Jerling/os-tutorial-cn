@@ -1,0 +1,72 @@
+[[file:./README_en.org][English]]
+
+/事先需要 Google 的概念：freestanding, uint32_t, size_t/
+
+*目标：修复我们代码中的问题*
+
+OSDev wiki 有一部分 [[http://wiki.osdev.org/James_Molloy%27s_Tutorial_Known_Bugs][描述 JamesM's 教程存在的一些问题]].
+因为我们的 18-22 课是跟着他的教程做的（中断到 malloc），在断续学习之前，我们必须将这些问题
+解决掉。
+
+** 1. 错误的 CFLAGS
+我们在编译 =.o= 文件时
+加入了 =-ffreestanding= ， 它包含 =kerrnel_entry.o= , 因此， =kernel.bin= 和
+=os-image.bin= 也是一样。
+
+之前我们使用 =-nostdlib= 禁用 =libgcc(不是libc)= , 而且在链接的时候也没有重新开启。
+因为这个很棘手，我们去掉了 =-nostdlib= .
+
+=-nostdinc= 之前是开启的，因为我们在第三步的时候需要它，因此去掉它。
+
+**２．kernel.c =main()= 函数
+修改 =kernel/kernel.c= 中的 =main()= 函数名为 =kernel_main()= . 因为 gcc 将 "main"
+视为一个特殊的关键字，我们不想和它搞混。
+
+根据上面的修改，在 =boot/kerrnel_entry.asm= 中的使用新名字。
+
+修复 = i386-elf-ld: warning: cannot find entry symbol _start; defaulting to 0000000000001000=
+警告信息，增加一个 =global_start;= 并在 =boot/kernel_entry.asm= 中定义 =_start:= 标记。
+
+** 3. 彻底修改数据类型
+看来之前定义非标准的类型（如 =u32= ) 是个很糟糕的主意，因为 C99 引入了标准固定宽度的数据类型
+如 =uint32_t= .
+
+我们需要包含 =<stdint.g>= , 即使使用 =-ffreestanding= 时，它也可以工作（但是需要 stdlibs）。
+用这些数据类型代替我们定义在 =type.h= 中的类型。
+
+我们也删除了 =__asm__= 和 =__volatile__= 的下划线，因为它们不需要了。
+
+**４. =kmalloc= 中的错误对齐
+首先，因为 =kmalloc= 使用一个大小参数，我们将使用正确的数据类型 =size_t= 替代 =uint32_t=
+=size_t= 应该用在所有 =计数= 的对象上，而且不能为负数。需要包含 =<stddef.h> .
+
+我们之后不会断续修复 =kmalloc= , 让它成为一个适当的内存管理员，并可以数据类型对齐。
+现在，它仍然返回一个内存对齐的内存块。
+
+** 5. 缺少的方法
+在接下来的课程，我们将实现缺少的 =mem*= 方法
+
+** 6. 中断处理
+=cli= 是多余的，因为我们已经使用 =idt_gate_t= 标志决定是否启用 IDT 中的条目。
+
+=sti= 也是多余的，因为 =iret= 指令从栈中加载 =eflags= 时，会包含一个位表明
+中断是否开启。
+
+换句话说，中断处理程序会自动恢复中断，不管在这个中断之前是否开启过中断。
+
+在 =cpu/isr.h= 中，=struct register_t= 存在两个问题。
+
+首先，称为 =esp= 的寄存器被重命名为 =useless= . 这个值是无用的，因为它处理的是当前栈，
+而不是中断之前的。接着我们将 =useesp= 重命名为 =esp= .
+
+根据 wiki 的建议，我们在 =cpu/interrupt.asm= 中的 =call isr_handler= 之前加入了 =cld= . 
+
+最后，=cpu/interrupt.asm= 中存在一个重要的问题，公共槽在栈上创建了一个
+ =struct registers= 实例，然而调用 C 处理函数。这样就破坏了 ABI, 因为这个栈属于被调用
+ 函数的，它们可以根据它们的意愿进行修改。因此，有必要将将这个结构体换为指针。
+
+为了实现这个，编辑 =cpu/isr.h= 和 =cpu/isr.c= , 修改 =register_t r= 为 =register_t *t= ,
+接着，用指针域访问符 =->= 代替结构体访问符 =.= . 最后， =cpu/interrupt.asm= 中在调用
+=isr_handler= 和 =irq_handler= 之前都增加 =push esp= —— 之后记得 =pop eax= 清除这个指针。
+
+当前的两个回调，定时器和键盘，也需要变为使用指向 =register_t= 的指针。
